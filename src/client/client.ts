@@ -1,9 +1,25 @@
 import * as THREE from 'three'
-import { BoxGeometry, Color, CylinderGeometry, Mesh, RingGeometry, TubeGeometry } from 'three'
+import {
+    BoxGeometry,
+    Color,
+    CylinderGeometry,
+    Group,
+    Mesh,
+    RingGeometry,
+    TubeGeometry,
+} from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { getRandomHexColor, resizeRendererToDisplaySize } from './utils'
+import * as Stats from 'stats.js'
 
-function generateRgbLedStrip(x: number, y: number, length: number, spacing: number, color: number) {
+function generateRgbLedStrip(
+    x: number,
+    y: number,
+    z: number,
+    length: number,
+    spacing: number,
+    color: number
+) {
     // Create a new group to hold the cubes
     const ledStrip = new THREE.Group()
 
@@ -15,7 +31,7 @@ function generateRgbLedStrip(x: number, y: number, length: number, spacing: numb
         // Calculate the position of the current cube
         const posX = i * (length + spacing)
         const posY = 0
-        const posZ = 0
+        const posZ = z
 
         // Create a new cube with the specified dimensions and position
         const cubeGeometry = new THREE.BoxGeometry(length, y, y)
@@ -24,8 +40,8 @@ function generateRgbLedStrip(x: number, y: number, length: number, spacing: numb
 
         // cube.castShadow = true
         // cube.receiveShadow = true
-        // const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
-        // cube.add(ambientLight)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
+        cube.add(ambientLight)
         cube.position.set(posX, posY, posZ)
         // Add the cube to the LED strip group
         ledStrip.add(cube)
@@ -45,9 +61,14 @@ function main() {
 
     document.body.appendChild(renderer.domElement)
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
+    const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    )
     camera.position.z = 2
-    camera.position.set(-0.09156989822285803, 4.298980723302594, 17.634938238807294)
+    camera.position.set(-6.06705108761297, 35.7260670275573, 50.511095828964514)
     // @ts-ignore
     window.camera = camera
     const controls = new OrbitControls(camera, renderer.domElement)
@@ -85,8 +106,13 @@ function main() {
 
     const axesHelper = new THREE.AxesHelper(5)
     scene.add(axesHelper)
-    const mesh = generateRgbLedStrip(10, 1, 1, 0.5, 0xff0000)
-    scene.add(mesh)
+    const meshes: Group[] = []
+
+    for (let i = 0; i < 50; i++) {
+        const mesh = generateRgbLedStrip(100, 1, -i * 3, 1, 0.2, 0xff0000)
+        scene.add(mesh)
+        meshes.push(mesh)
+    }
 
     const auraMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -113,13 +139,15 @@ function main() {
       `,
     })
 
-    for (let i = 0; i < mesh.children.length; i++) {
-        // @ts-ignore
-        const m = (mesh.children[i].material.color = new Color(
-            Math.random(),
-            Math.random(),
-            Math.random()
-        ))
+    function randomizeMeshes(mesh: Group) {
+        for (let i = 0; i < mesh.children.length; i++) {
+            // @ts-ignore
+            const m = (mesh.children[i].material.color = new Color(
+                Math.random(),
+                Math.random(),
+                Math.random()
+            ))
+        }
     }
 
     // {
@@ -150,7 +178,16 @@ function main() {
         pointer.y = -(event.layerY / window.innerHeight) * 2 + 1
     }
 
+    const stats = new Stats()
+    stats.showPanel(0) // 0: fps, 1: ms, 2: mb, 3+: custom
+    document.body.appendChild(stats.dom)
+
     function render(time: number) {
+        stats.begin()
+
+        for (let meshGroup of meshes) {
+            randomizeMeshes(meshGroup)
+        }
         if (resizeRendererToDisplaySize(renderer)) {
             const canvas = renderer.domElement
             camera.aspect = canvas.clientWidth / canvas.clientHeight
@@ -167,12 +204,13 @@ function main() {
         renderer.render(scene, camera)
 
         requestAnimationFrame(render)
+        stats.end()
     }
     requestAnimationFrame(render)
 
-    setInterval(() => {
-        material.color = new Color(Math.random() * 16 ** 6)
-    }, 1000)
+    // setInterval(() => {
+    //     material.color = new Color(Math.random() * 16 ** 6)
+    // }, 1000)
 }
 
 main()
